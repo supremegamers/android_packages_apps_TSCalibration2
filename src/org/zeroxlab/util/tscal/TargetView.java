@@ -27,10 +27,11 @@ public class TargetView extends View {
     public TargetView(Context context, AttributeSet attrs)
     {
         super(context);
+        TSCalibration.setImmersiveMode(this);
     }
 
     @Override
-    protected void onMeasure (int widthMeasureSpec, int heightMeasureSpec)
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec)
     {
         setMeasuredDimension(50, 50);
     }

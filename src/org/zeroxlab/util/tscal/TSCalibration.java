@@ -22,10 +22,9 @@ import java.io.IOException;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Display;
 import android.view.MotionEvent;
-
+import android.view.View;
 import android.util.Log;
 
 public class TSCalibration extends Activity {
@@ -33,7 +32,7 @@ public class TSCalibration extends Activity {
     final private static String TAG = "TSCalibration";
     final private static String POINTERCAL = "/data/misc/tscal/pointercal";
     final private static String defaultPointercalValues = "1 0 0 0 0 1 1 1 1 0 0 0 0 1 1 1\n";
-    final private static File FILE = new File(POINTERCAL);
+    final protected static File FILE = new File(POINTERCAL);
 
     private TSCalibrationView mTSCalibrationView;
 
@@ -41,10 +40,7 @@ public class TSCalibration extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Display display = getWindowManager().getDefaultDisplay();
-        mTSCalibrationView = new TSCalibrationView(this,
-                                                   display.getHeight(),
-                                                   display.getWidth());
+        mTSCalibrationView = new TSCalibrationView(this);
         setContentView(R.layout.intro);
     }
 
@@ -71,7 +67,6 @@ public class TSCalibration extends Activity {
     private void reset() {
         try {
             FileOutputStream fos = new FileOutputStream(FILE);
-            fos.write(defaultPointercalValues.getBytes());
             fos.flush();
             fos.getFD().sync();
             fos.close();
@@ -85,5 +80,14 @@ public class TSCalibration extends Activity {
         if (mTSCalibrationView.isFinished()) {
             setContentView(R.layout.done);
         }
+    }
+
+    static protected void setImmersiveMode(View v) {
+        v.setSystemUiVisibility(v.SYSTEM_UI_FLAG_LAYOUT_STABLE
+            | v.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+            | v.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            | v.SYSTEM_UI_FLAG_HIDE_NAVIGATION // hide nav bar
+            | v.SYSTEM_UI_FLAG_FULLSCREEN      // hide status bar
+            | v.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
     }
 }

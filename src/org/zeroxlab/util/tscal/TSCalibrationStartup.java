@@ -21,19 +21,21 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.util.Log;
 
 import java.io.File;
+//import org.zeroxlab.util.tscal.TSCalibration;
 
 public class TSCalibrationStartup extends Activity {
 
-    private static String cal_path = "/data/misc/tscal/pointercal";
-
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        Settings.Secure.putString(getContentResolver(),
+                Settings.Secure.IMMERSIVE_MODE_CONFIRMATIONS,
+                getPackageName());
         super.onCreate(savedInstanceState);
-        File calFile = new File(cal_path);
-        if (!calFile.exists()) {
+        if (TSCalibration.FILE.exists() && TSCalibration.FILE.length() == 0) {
             Intent starterIntent = new Intent(this, TSCalibration.class);
             startActivityForResult(starterIntent, 0);
         } else {

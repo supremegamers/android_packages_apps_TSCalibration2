@@ -48,16 +48,11 @@ public class TSCalibrationView extends View {
     private TargetPoint mTargetPoints[];
     private TSCalibration mContext;
 
-    public TSCalibrationView(TSCalibration context, int h, int w) {
+    public TSCalibrationView(TSCalibration context) {
         super(context);
 
         mContext = context;
-        mTargetPoints = new TargetPoint[5];
-        mTargetPoints[0] = new TargetPoint(50, 50);
-        mTargetPoints[1] = new TargetPoint(w - 50, 50);
-        mTargetPoints[2] = new TargetPoint(w - 50, h - 50);
-        mTargetPoints[3] = new TargetPoint(50, h - 50);
-        mTargetPoints[4] = new TargetPoint(w/2, h/2);
+        context.setImmersiveMode(this);
     }
 
     public void reset() {
@@ -69,22 +64,10 @@ public class TSCalibrationView extends View {
     }
 
     public void dumpCalData(File file) {
-        StringBuilder sb = new StringBuilder();
-        for (TargetPoint point : mTargetPoints) {
-            sb.append(point.calx);
-            sb.append(" ");
-            sb.append(point.caly);
-            sb.append(" ");
-        }
-        for (TargetPoint point : mTargetPoints) {
-            sb.append(point.x);
-            sb.append(" ");
-            sb.append(point.y);
-            sb.append(" ");
-        }
+        String cal = performCalibration();
         try {
             FileOutputStream fos = new FileOutputStream(file);
-            fos.write(sb.toString().getBytes());
+            fos.write(cal.getBytes());
             fos.flush();
             fos.getFD().sync();
             fos.close();
@@ -110,6 +93,15 @@ public class TSCalibrationView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        if (mTargetPoints == null) {
+            int w = getWidth(), h = getHeight();
+            mTargetPoints = new TargetPoint[5];
+            mTargetPoints[0] = new TargetPoint(50, 50);
+            mTargetPoints[1] = new TargetPoint(w - 50, 50);
+            mTargetPoints[2] = new TargetPoint(w - 50, h - 50);
+            mTargetPoints[3] = new TargetPoint(50, h - 50);
+            mTargetPoints[4] = new TargetPoint(w / 2, h / 2);
+        }
         if (isFinished())
             return;
         canvas.drawColor(Color.BLACK);
@@ -128,5 +120,80 @@ public class TSCalibrationView extends View {
         c.drawCircle(x, y, 9, red);
         c.drawCircle(x, y, 5, white);
         c.drawCircle(x, y, 1, red);
+    }
+
+    private String performCalibration() {
+        int cal[] = new int[7];
+        double n, x, y, x2, y2, xy, z, zx, zy;
+        double det, a, b, c, e, f, i;
+        double scaling = 65536.0;
+
+        // Get sums for matrix
+        n = x = y = x2 = y2 = xy = 0;
+        for (TargetPoint point : mTargetPoints) {
+            n += 1;
+            x += (double)point.calx;
+            y += (double)point.caly;
+            x2 += (double)(point.calx * point.calx);
+            y2 += (double)(point.caly * point.caly);
+            xy += (double)(point.calx * point.caly);
+            Log.v(TAG, n + "x=" + point.x + " y=" + point.y + " calx=" + point.calx + " caly=" + point.caly);
+        }
+
+        // Get determinant of matrix -- check if determinant is too small
+        det = n*(x2*y2 - xy*xy) + x*(xy*y - x*y2) + y*(x*xy - y*x2);
+        if (det > -0.1 && det < 0.1) {
+            Log.w(TAG, "determinant is too small -- " + det);
+        }
+
+        // Get elements of inverse matrix
+        a = (x2*y2 - xy*xy);
+        b = (xy*y - x*y2);
+        c = (x*xy - y*x2);
+        e = (n*y2 - y*y);
+        f = (x*y - n*xy);
+        i = (n*x2 - x*x);
+
+        // Get sums for x calibration
+        z = zx = zy = 0;
+        for (TargetPoint point : mTargetPoints) {
+            z += (double)point.x;
+            zx += (double)(point.x * point.calx);
+            zy += (double)(point.x * point.caly);
+        }
+
+        // Now multiply out to get the calibration for framebuffer x coord
+        cal[2] = (int)((a*z + b*zx + c*zy) * scaling / det);
+        cal[0] = (int)((b*z + e*zx + f*zy) * scaling / det);
+        cal[1] = (int)((c*z + f*zx + i*zy) * scaling / det);
+
+        // Get sums for y calibration
+        z = zx = zy = 0;
+        for (TargetPoint point : mTargetPoints) {
+            z += (double)point.y;
+            zx += (double)(point.y * point.calx);
+            zy += (double)(point.y * point.caly);
+        }
+
+        // Now multiply out to get the calibration for framebuffer y coord
+        cal[5] = (int)((a*z + b*zx + c*zy) * scaling / det);
+        cal[3] = (int)((b*z + e*zx + f*zy) * scaling / det);
+        cal[4] = (int)((c*z + f*zx + i*zy) * scaling / det);
+
+        // If we got here, we're OK, so assign scaling to a[6] and return
+        cal[6] = (int)scaling;
+
+        StringBuilder sb = new StringBuilder();
+        for (int s : cal) {
+            sb.append(s);
+            sb.append(" ");
+        }
+        sb.append(getWidth());
+        sb.append(" ");
+        sb.append(getHeight());
+        sb.append("\n");
+        String ret = sb.toString();
+        Log.i(TAG, "pointercal = " + ret);
+        return ret;
     }
 }
