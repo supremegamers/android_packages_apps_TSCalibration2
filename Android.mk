@@ -18,6 +18,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE_TAGS := optional
 LOCAL_SRC_FILES := $(call all-subdir-java-files)
+LOCAL_PRIVATE_PLATFORM_APIS := true
 LOCAL_PACKAGE_NAME := TSCalibration2
 LOCAL_OVERRIDES_PACKAGES := TSCalibration
 LOCAL_CERTIFICATE := platform
